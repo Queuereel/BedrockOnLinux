@@ -606,12 +606,27 @@ def hide_signin_button(game_dir):
     import re
     try:
         vanilla = Path(game_dir) / "data" / "resource_packs" / "vanilla"
+        ss = vanilla / "ui" / "start_screen.json"
         bra = vanilla / "__brarchive" / "ui.brarchive"
+        bak = bra.parent / "ui.brarchive.bol-bak"
+        if not ss.exists():
+            # Starting with 1.26.50, Mojang stopped shipping the loose ui/
+            # folder's start_screen.json at all -- everything needed to
+            # render the start screen lives in ui.brarchive alone. Renaming
+            # that archive away regardless, as this used to, left the game
+            # with no UI definitions to boot from at all: a page fault at
+            # ~80% loading, reproduced identically across Intel/AMD/NVIDIA
+            # (issue #266). Skip the cosmetic fix rather than break the game
+            # on builds this trick no longer applies to, and put back an
+            # archive a previous, buggier run already renamed away -- this
+            # runs on every PLAY, so an install already stuck crashing from
+            # that heals itself on the next one instead of needing a manual
+            # `mv ui.brarchive.bol-bak ui.brarchive`.
+            if bak.exists() and not bra.exists():
+                bak.rename(bra)
+            return
         if bra.exists():
             bra.rename(bra.parent / "ui.brarchive.bol-bak")
-        ss = vanilla / "ui" / "start_screen.json"
-        if not ss.exists():
-            return
         txt = ss.read_text(encoding="utf-8", errors="ignore")
         new, n = re.subn(
             r'("xbl_signin_button@start\.xbl_signin_button"\s*:\s*\{\}\s*\}\s*\]'
